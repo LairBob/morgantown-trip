@@ -4,7 +4,10 @@ Long-weekend reunion in Morgantown, WV — three friends from Taft '83, June 12�
 
 ## Live site
 
-A static-hosted version of the interactive tools is published from this repo (see Netlify deploy badge once configured). Updates push automatically on every commit.
+**https://chic-platypus-1274d9.netlify.app/compare.html** — comparison view
+**https://chic-platypus-1274d9.netlify.app/morgantown_map.html** — area map
+
+Hosted on Netlify, deployed from `main`. Every push to this repo triggers a rebuild within roughly 30 seconds. The URL is intentionally random/unguessable (security-by-obscurity); do not link it from anywhere public.
 
 ## Files
 
@@ -35,11 +38,4 @@ The scoring system has two halves — a per-area weighted overall for neighborho
 ```python
 import json, pandas as pd
 data = json.load(open('properties.json'))
-df = pd.json_normalize(data['properties'], sep='_')
-```
-
-For BigQuery: load as a single JSON column, then `JSON_VALUE` / `JSON_QUERY` your way through.
-
-## Status
-
-Active as of 2026-05-02. Trip is June 12–15, 2026.
+df = pd.
