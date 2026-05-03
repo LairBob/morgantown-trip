@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morgantown Trip — Rental Candidates</title>
+<style>
+  :root {
+    --ink: #2b2a26;
+    --paper: #f7f3ec;
+    --panel: #ffffff;
+    --warm: #b3603b;
+    --moss: #4a6b3a;
+    --slate: #4a5d6e;
+    --gold: #c79a3a;
+    --rule: #d8d2c4;
+    --muted: #6f6a5e;
+    --soft: #efe8d7;
+    --soft-text: #6b5a2c;
+    --hover: #ede6d4;
+    --placeholder: #8a8576;
+    --track: #e6dfce;
+    --range-fill: #b5d4f4;
+    --range-fill-dark: #5b8c5a;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px 36px 60px; max-width: 1080px; margin: 0 auto;
+         background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.5; }
+  h1 { font-family: var(--serif); font-size: 30px; font-weight: 600; margin: 0 0 4px; letter-spacing: 0.005em; }
+  .subhead { font-size: 13px; color: var(--muted); font-style: italic; margin: 0 0 20px; }
+  h2 { font-family: var(--serif); font-size: 16px; font-weight: 600;
+       text-transform: uppercase; letter-spacing: 0.14em; color: var(--slate);
+       border-bottom: 1px solid var(--rule); padding-bottom: 5px; margin: 32px 0 12px; }
+  p.section-sub { font-size: 13px; color: var(--muted); margin: 4px 0 14px; max-width: 70ch; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+         background: var(--soft); padding: 1px 5px; border-radius: 3px; }
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 4px 0 14px; }
+  .legend-key { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-swatch { display: inline-block; width: 14px; height: 9px; border-radius: 1px;
+                   border: 1px solid rgba(0,0,0,0.1); }
+
+  .area-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 14px; }
+  .area-card { background: var(--panel); border: 1px solid var(--rule);
+               border-radius: 4px; padding: 14px 16px 18px; }
+  .area-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .area-name { font-family: var(--serif); font-size: 17px; font-weight: 600; margin: 0; }
+  .area-count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .area-summary { font-size: 12px; color: var(--muted); margin: 4px 0 10px; line-height: 1.45; }
+  .range-wrap { position: relative; height: 38px; margin: 14px 0 4px; }
+  .range-axis { position: absolute; top: 16px; left: 0; right: 0; height: 8px;
+                background: var(--paper); border: 1px solid var(--rule); border-radius: 2px; }
+  .range-fill { position: absolute; top: 16px; height: 8px; background: var(--range-fill);
+                opacity: 0.7; border-radius: 2px; }
+  .range-bound { position: absolute; top: -1px; font-size: 12px; color: var(--ink);
+                 font-variant-numeric: tabular-nums; transform: translateX(-50%); font-weight: 600; }
+  .tick { position: absolute; top: 12px; height: 16px; width: 1px; background: var(--placeholder); }
+  .tick-label { position: absolute; top: 30px; font-size: 9px; color: var(--placeholder);
+                transform: translateX(-50%); white-space: nowrap; }
+  .anchor { position: absolute; top: 14px; width: 8px; height: 12px; background: var(--warm);
+            border-radius: 1px; transform: translateX(-50%); }
+  .anchor-label { position: absolute; top: 30px; font-size: 9px; color: var(--warm);
+                  transform: translateX(-50%); white-space: nowrap; font-weight: 500; }
+  .area-confidence { font-size: 10px; color: var(--placeholder); margin-top: 6px; font-style: italic; }
+
+  .props-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+  .prop { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+          padding: 14px 16px 12px; transition: border-color 200ms ease; }
+  .prop.featured { border: 2px solid var(--warm); padding: 13px 15px 11px; }
+  .prop.faded { opacity: 0.65; }
+  .prop:hover { border-color: var(--placeholder); }
+  .prop-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .prop-name { font-family: var(--serif); font-size: 16px; font-weight: 600;
+               margin: 0; line-height: 1.25; flex: 1; min-width: 0; }
+  .prop-overall { font-family: var(--serif); font-size: 22px; font-weight: 600;
+                  font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .prop-overall .suffix { font-size: 11px; color: var(--muted); margin-left: 1px; }
+  .tags { margin: 6px 0 8px; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px;
+         font-size: 11px; margin-right: 4px; margin-bottom: 3px; }
+  .tag-cand { background: #e3eedb; color: #466b2a; }
+  .tag-need { background: #f6e4c4; color: #8c5e1c; }
+  .tag-shortlist { background: #f2dca6; color: #6e5318; }
+  .tag-rejected { background: #d6d4cb; color: #71706a; }
+  .tag-area { background: var(--soft); color: var(--soft-text); }
+  .tag-platform { background: var(--track); color: var(--muted); }
+  .prop-spec { font-size: 12px; color: var(--muted); margin: 4px 0 8px;
+               font-variant-numeric: tabular-nums; }
+  .subscores { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;
+               margin: 8px 0 8px; padding: 6px 0; border-top: 1px solid var(--rule);
+               border-bottom: 1px solid var(--rule); }
+  .sub { text-align: center; }
+  .sub-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
+               color: var(--placeholder); margin-bottom: 3px; }
+  .sub-bar { height: 4px; background: var(--track); border-radius: 1px; overflow: hidden; }
+  .sub-fill { height: 100%; background: var(--moss); }
+  .sub-value { font-size: 11px; color: var(--ink); margin-top: 3px;
+               font-variant-numeric: tabular-nums; }
+  .prop-foot { display: flex; justify-content: space-between; align-items: center;
+               font-size: 12px; }
+  .prop-price { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .prop-link { color: var(--warm); text-decoration: none; }
+  .prop-link:hover { text-decoration: underline; }
+  .prop-link.muted { color: var(--placeholder); cursor: default; }
+  .availability-badge { display: inline-block; font-size: 10px; padding: 1px 6px;
+                        border-radius: 9px; margin-left: 6px;
+                        font-variant-numeric: tabular-nums; }
+  .av-unknown   { background: var(--track); color: var(--muted); }
+  .av-available { background: #d8e9c7; color: #466b2a; }
+  .av-blocked   { background: #efcfc7; color: #8b3a26; }
+
+  .availability-note { background: #f5e9d0; border: 1px solid #d4b87c;
+                       padding: 14px 18px; border-radius: 4px;
+                       font-size: 13px; color: #5a3e16; line-height: 1.55;
+                       margin-top: 24px; }
+  .availability-note strong { color: #3a2a0e; font-family: var(--serif); }
+
+  .status-msg { padding: 14px 18px; background: var(--panel);
+                border: 1px solid var(--rule); border-radius: 4px;
+                font-size: 13px; color: var(--muted); }
+  .footer-meta { font-size: 11px; color: var(--placeholder); margin-top: 32px;
+                 text-align: center; font-style: italic; }
+</style>
+</head>
+<body>
+
+<h1>Morgantown rental candidates</h1>
+<p class="subhead">June 12&ndash;15, 2026 · Taft '83 reunion · 3 BR · good kitchen for cooking dinner Sat &amp; Sun</p>
+
+<div id="status" class="status-msg">Loading <code>properties.json</code>...</div>
+
+<div id="content" style="display: none;">
+  <h2>By area &mdash; cost range</h2>
+  <p class="section-sub">
+    Solid bar shows the realistic 3 BR price range for each area. Tick marks below mark AirDNA's citywide quartiles for context.
+    Most ranges are estimates from listings; one anchor (Westover, $137) is from a confirmed listing.
+  </p>
+  <div class="legend">
+    <span class="legend-key"><span class="legend-swatch" style="background: var(--range-fill); opacity: 0.7;"></span>Estimated 3 BR range</span>
+    <span class="legend-key"><span class="legend-swatch" style="background: var(--warm); width: 6px; height: 12px;"></span>Confirmed price</span>
+    <span class="legend-key"><span class="legend-swatch" style="background: var(--placeholder); width: 1px; height: 11px;"></span>AirDNA market quartile</span>
+  </div>
+  <div class="area-grid" id="area-grid"></div>
+
+  <h2>Top candidates</h2>
+  <p class="section-sub">
+    Properties with status <code>candidate</code>, ranked by overall score (0&ndash;5).
+    The leader carries the accent border. Subscores: spec fit, kitchen, amenities, value, confidence.
+  </p>
+  <div class="props-grid" id="candidates-grid"></div>
+
+  <h2>Range-establishing samples</h2>
+  <p class="section-sub">
+    Properties with status <code>needs_verification</code>. Faded because they aren't actively in the running &mdash;
+    either unconfirmed listings or known fit problems &mdash; but useful for bracketing the cost reality of each area.
+  </p>
+  <div class="props-grid" id="samples-grid"></div>
+
+  <div class="availability-note">
+    <strong>On availability.</strong> The tracker now carries an <code>availability</code> block on every property
+    (status: unknown / available / blocked / partial). From here on, only properties confirmed available for
+    June 12&ndash;15 should be promoted past <code>needs_verification</code>.
+    Direct URL fetches to Airbnb and VRBO are blocked at the network egress layer in this environment, so
+    automated availability checks aren't currently possible from this tool.
+    Realistic next steps: (a) click each candidate&rsquo;s listing link below, set check-in 2026-06-12 and check-out 2026-06-15,
+    note the result back into <code>properties.json</code>; or (b) wire up Chrome MCP for interactive availability passes.
+  </div>
+  <p class="footer-meta">
+    Reads <code>properties.json</code> · sister page to <code>morgantown_map.html</code> · last data update shown above
+  </p>
+</div>
+
+<script src="properties.js"></script>
+<script>
+const RANGE_MIN = 75;
+const RANGE_MAX = 425;
+const QUARTILES = [85, 125, 193, 295];
+
+function pct(price) {
+  return ((price - RANGE_MIN) / (RANGE_MAX - RANGE_MIN) * 100).toFixed(2);
+}
+
+function statusTag(status) {
+  const map = {
+    candidate:           ['Candidate', 'tag-cand'],
+    needs_verification:  ['Needs verification', 'tag-need'],
+    shortlist:           ['Shortlist', 'tag-shortlist'],
+    held:                ['Held', 'tag-shortlist'],
+    booked:              ['Booked', 'tag-cand'],
+    rejected:            ['Rejected', 'tag-rejected']
+  };
+  const [label, cls] = map[status] || ['Unknown', 'tag-rejected'];
+  return '<span class="tag ' + cls + '">' + label + '</span>';
+}
+
+function availabilityBadge(av) {
+  if (!av) return '';
+  const map = { unknown: ['Avail ?', 'av-unknown'], available: ['Available', 'av-available'],
+                blocked: ['Blocked', 'av-blocked'], partial: ['Partial', 'av-unknown'] };
+  const [label, cls] = map[av.status] || ['?', 'av-unknown'];
+  return '<span class="availability-badge ' + cls + '">' + label + '</span>';
+}
+
+function renderArea(a) {
+  if (!a.cost_range_usd) return '';
+  const lo = pct(a.cost_range_usd.low);
+  const hi = pct(a.cost_range_usd.high);
+  const fillW = (parseFloat(hi) - parseFloat(lo)).toFixed(2);
+  const ticks = QUARTILES.map(q =>
+    '<span class="tick" style="left: ' + pct(q) + '%;"></span>' +
+    '<span class="tick-label" style="left: ' + pct(q) + '%;">$' + q + '</span>'
+  ).join('');
+  const anchor = (a.cost_range_usd.confidence === 'partly_anchored')
+    ? '<span class="anchor" title="Confirmed price" style="left: ' + pct(137) + '%;"></span>' +
+      '<span class="anchor-label" style="left: ' + pct(137) + '%;">$137 confirmed</span>'
+    : '';
+  return '<div class="area-card">' +
+    '<div class="area-head">' +
+      '<h3 class="area-name">' + a.name + '</h3>' +
+      '<span class="area-count" id="cnt-' + a.id + '"></span>' +
+    '</div>' +
+    '<p class="area-summary">' + a.summary + '</p>' +
+    '<div class="range-wrap">' +
+      '<span class="range-bound" style="left: ' + lo + '%;">$' + a.cost_range_usd.low + '</span>' +
+      '<span class="range-bound" style="left: ' + hi + '%;">$' + a.cost_range_usd.high + '</span>' +
+      '<div class="range-axis"></div>' +
+      '<div class="range-fill" style="left: ' + lo + '%; width: ' + fillW + '%;"></div>' +
+      ticks + anchor +
+    '</div>' +
+    '<p class="area-confidence">' + a.cost_range_usd.notes + '</p>' +
+  '</div>';
+}
+
+function renderProp(p, areasById, opts) {
+  const isFaded = opts && opts.faded;
+  const isFeat = opts && opts.featured;
+  const cls = 'prop' + (isFeat ? ' featured' : '') + (isFaded ? ' faded' : '');
+  const area = areasById[p.area_id];
+  const specs = [];
+  if (p.specs && p.specs.bedrooms) specs.push(p.specs.bedrooms + ' BR');
+  if (p.specs && p.specs.bathrooms) specs.push(p.specs.bathrooms + ' BA');
+  if (p.specs && p.specs.sleeps) specs.push('sleeps ' + p.specs.sleeps);
+  if (p.specs && p.specs.sq_ft) specs.push(p.specs.sq_ft + ' sqft');
+  const specLine = specs.length ? specs.join(' · ') : '<em style="color: var(--placeholder);">specs unconfirmed</em>';
+
+  const subs = ['spec_fit','kitchen','amenities','value','confidence'];
+  const subAbbr = { spec_fit: 'spec', kitchen: 'kit', amenities: 'amen', value: 'val', confidence: 'conf' };
+  const subsHtml = (p.scores
+    ? subs.map(k => {
+        const v = p.scores[k];
+        if (v == null) return '';
+        return '<div class="sub">' +
+          '<div class="sub-label">' + subAbbr[k] + '</div>' +
+          '<div class="sub-bar"><div class="sub-fill" style="width: ' + (v / 5 * 100) + '%;"></div></div>' +
+          '<div class="sub-value">' + Number(v).toFixed(1) + '</div>' +
+        '</div>';
+      }).join('')
+    : '');
+
+  const overallHtml = (p.scores && p.scores.overall != null)
+    ? '<span class="prop-overall">' + p.scores.overall.toFixed(2) + '<span class="suffix">/5</span></span>'
+    : '';
+
+  const priceLine = (p.pricing && p.pricing.advertised_nightly_avg != null)
+    ? '$' + p.pricing.advertised_nightly_avg + '/night avg'
+    : ((p.ratings && p.ratings.score != null) ? '★ ' + p.ratings.score +
+         (p.ratings.review_count ? ' · ' + p.ratings.review_count + ' reviews' : '') : 'price TBD');
+
+  const linkHtml = p.url
+    ? '<a class="prop-link" href="' + p.url + '" target="_blank">Open listing &rarr;</a>'
+    : '<span class="prop-link muted">URL not pinned</span>';
+
+  const tags = [];
+  tags.push(statusTag(p.status));
+  if (area) tags.push('<span class="tag tag-area">' + area.name + '</span>');
+  if (p.platform) tags.push('<span class="tag tag-platform">' + p.platform + '</span>');
+
+  return '<div class="' + cls + '">' +
+    '<div class="prop-head">' +
+      '<h3 class="prop-name">' + p.name + availabilityBadge(p.availability) + '</h3>' +
+      overallHtml +
+    '</div>' +
+    '<div class="tags">' + tags.join('') + '</div>' +
+    '<div class="prop-spec">' + specLine + '</div>' +
+    (subsHtml ? '<div class="subscores">' + subsHtml + '</div>' : '') +
+    '<div class="prop-foot">' +
+      '<span class="prop-price">' + priceLine + '</span>' + linkHtml +
+    '</div>' +
+  '</div>';
+}
+
+async function load() {
+  // Path A: live fetch (works under HTTP).
+  try {
+    const res = await fetch('properties.json', { cache: 'no-cache' });
+    if (res.ok) {
+      const data = await res.json();
+      render(data);
+      return;
+    }
+  } catch (e) { /* fall through */ }
+
+  // Path B: fall back to the script-tag shim (works under file://).
+  if (window.PROPERTIES_DATA) {
+    render(window.PROPERTIES_DATA);
+    return;
+  }
+
+  document.getElementById('status').innerHTML =
+    '<strong>Tracker not loaded.</strong> Could not fetch <code>properties.json</code> ' +
+    'and <code>properties.js</code> is not present. Run <code>python regen_properties_js.py</code> ' +
+    'in this directory to generate the shim, or serve via ' +
+    '<code>python -m http.server 8000</code> and open <code>http://localhost:8000/compare.html</code>.';
+}
+
+function render(data) {
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('content').style.display = '';
+  const areasById = Object.fromEntries(data.areas.map(a => [a.id, a]));
+
+  document.getElementById('area-grid').innerHTML = data.areas.map(renderArea).join('');
+
+  // Counts per area
+  const byArea = {};
+  data.properties.forEach(p => {
+    byArea[p.area_id] = byArea[p.area_id] || { candidate: 0, needs_verification: 0, total: 0 };
+    byArea[p.area_id].total++;
+    if (p.status === 'candidate') byArea[p.area_id].candidate++;
+    if (p.status === 'needs_verification') byArea[p.area_id].needs_verification++;
+  });
+  data.areas.forEach(a => {
+    const el = document.getElementById('cnt-' + a.id);
+    if (!el) return;
+    const c = byArea[a.id] || { candidate: 0, total: 0 };
+    el.textContent = c.candidate + ' active / ' + c.total + ' total';
+  });
+
+  const candidates = data.properties.filter(p => p.status === 'candidate' || p.status === 'shortlist' || p.status === 'booked')
+    .sort((a, b) => (b.scores?.overall || 0) - (a.scores?.overall || 0));
+  const samples = data.properties.filter(p => p.status === 'needs_verification' || p.status === 'rejected' || p.status === 'held')
+    .sort((a, b) => (b.scores?.overall || 0) - (a.scores?.overall || 0));
+
+  document.getElementById('candidates-grid').innerHTML = candidates.map((p, i) =>
+    renderProp(p, areasById, { featured: i === 0 })).join('');
+  document.getElementById('samples-grid').innerHTML = samples.map(p =>
+    renderProp(p, areasById, { faded: true })).join('');
+}
+
+load();
+</script>
+
+</body>
+</html>

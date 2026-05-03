@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morgantown Trip — Area Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  :root {
+    --ink: #2b2a26;
+    --paper: #f7f3ec;
+    --panel: #ffffff;
+    --warm: #b3603b;
+    --moss: #4a6b3a;
+    --slate: #4a5d6e;
+    --gold: #c79a3a;
+    --rule: #d8d2c4;
+    --muted: #6f6a5e;
+    --soft: #efe8d7;
+    --soft-text: #6b5a2c;
+    --hover: #ede6d4;
+    --placeholder: #8a8576;
+    --label-halo: #f7f3ec;
+    --track: #e6dfce;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  body.dark {
+    --ink: #e9e4d8;
+    --paper: #1d1f23;
+    --panel: #25282d;
+    --warm: #e08a5e;
+    --moss: #8db86c;
+    --slate: #a8b8c6;
+    --gold: #e6c067;
+    --rule: #3a3d44;
+    --muted: #9aa0a8;
+    --soft: #2f3239;
+    --soft-text: #d6c89a;
+    --hover: #2c2f35;
+    --placeholder: #7a7f88;
+    --label-halo: #1d1f23;
+    --track: #353841;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+  #app { display: flex; height: 100vh; min-height: 100vh; }
+  #sidebar {
+    width: 380px;
+    flex-shrink: 0;
+    background: var(--paper);
+    border-right: 1px solid var(--rule);
+    overflow-y: auto;
+    padding: 22px 24px 28px;
+  }
+  #map { flex: 1; min-width: 0; }
+  h1 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0 0 2px;
+    letter-spacing: 0.01em;
+  }
+  .dates { font-size: 13px; color: var(--muted); margin: 0 0 18px; font-style: italic; }
+  h2 {
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--slate);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 4px;
+    margin: 22px 0 10px;
+  }
+  .layer-toggle { display: block; margin: 6px 0; font-size: 14px; cursor: pointer; }
+  .layer-toggle input { margin-right: 8px; vertical-align: middle; }
+  .layer-toggle.disabled { color: var(--placeholder); cursor: default; }
+  .footnote { font-size: 11px; color: var(--placeholder); margin-top: 18px; line-height: 1.45; font-style: italic; }
+
+  .segmented {
+    display: flex;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    background: var(--panel);
+  }
+  .segmented button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--rule);
+    padding: 7px 6px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button:hover { background: var(--hover); }
+  .segmented button.active { background: var(--warm); color: #fff; }
+  .control-label {
+    display: block; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted); margin: 10px 0 4px;
+  }
+
+  .legend-row { display: flex; align-items: center; gap: 10px; font-size: 12px; margin: 4px 0; }
+  .legend-bar {
+    width: 26px; height: 12px; border-radius: 2px;
+    border: 1px solid rgba(127,127,127,0.3);
+    flex-shrink: 0;
+  }
+  .legend-note { font-size: 11px; color: var(--placeholder); margin: 8px 0 0; line-height: 1.45; font-style: italic; }
+
+  .attr-legend {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px;
+    font-size: 12px;
+  }
+  .attr-legend-row { display: flex; align-items: center; gap: 6px; }
+  .attr-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1px solid rgba(127,127,127,0.3); flex-shrink: 0;
+  }
+
+  .neighborhood-list { list-style: none; padding: 0; margin: 4px 0 0; }
+  .neighborhood-list li {
+    padding: 7px 6px; cursor: pointer; border-radius: 3px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; transition: background 120ms ease;
+  }
+  .neighborhood-list li:hover { background: var(--hover); }
+  .neighborhood-list li.selected { background: var(--soft); }
+  .row-name {
+    font-size: 13px;
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .row-bars { display: inline-flex; gap: 3px; flex-shrink: 0; align-items: center; }
+  .mini-bar {
+    width: 22px; height: 5px; border-radius: 1px;
+    background: var(--track);
+    position: relative; overflow: hidden;
+  }
+  .mini-bar.mini-bar-overall {
+    width: 26px; height: 7px; margin-left: 4px;
+    border: 1px solid rgba(127,127,127,0.25);
+  }
+  .mini-bar::after {
+    content: ''; position: absolute; left: 0; top: 0;
+    width: calc(var(--v, 0) * 100%); height: 100%;
+    background: var(--c, var(--warm));
+    transition: width 250ms ease;
+  }
+
+  .leaflet-control.info-control {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+    padding: 16px 18px 14px;
+    width: 380px;
+    max-width: calc(100% - 30px);
+    max-height: 65vh;
+    overflow-y: auto;
+    font-family: var(--sans);
+    color: var(--ink);
+    margin: 0 14px 14px 0;
+  }
+  .info-empty {
+    color: var(--placeholder); font-style: italic; font-size: 13px;
+    line-height: 1.5; padding: 6px 0;
+  }
+  .info-head { margin-bottom: 10px; }
+  .info-title {
+    font-family: var(--serif); font-size: 22px; font-weight: 600;
+    margin: 0 0 2px; letter-spacing: 0.005em;
+  }
+  .info-meta {
+    font-size: 11px; color: var(--placeholder);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .info-tags { margin: 6px 0 12px; }
+  .info-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    background: var(--soft); font-size: 11px; color: var(--soft-text);
+    margin-right: 4px; margin-bottom: 4px;
+  }
+  .attr-grid { margin: 8px 0 12px; }
+  .attr-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 110px;
+    gap: 12px; align-items: center;
+    margin: 7px 0;
+  }
+  .attr-row.attr-row-overall {
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid var(--rule);
+  }
+  .attr-row.attr-row-overall .attr-label { font-weight: 600; color: var(--ink); }
+  .attr-row.attr-row-overall .attr-value { font-weight: 600; }
+  .attr-row.attr-row-overall .attr-track { height: 10px; }
+  .attr-label {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .attr-track {
+    height: 8px; background: var(--track);
+    border-radius: 3px; overflow: hidden; position: relative;
+  }
+  .attr-fill {
+    display: block; height: 100%;
+    width: calc(var(--v, 0) * 100%);
+    background: var(--c, var(--warm));
+    transition: width 320ms cubic-bezier(0.3, 0.8, 0.4, 1);
+  }
+  .attr-value {
+    font-size: 12px; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .info-blurb {
+    font-size: 13px; line-height: 1.55;
+    margin: 4px 0 0; color: var(--ink);
+  }
+  .info-divider {
+    border: none; border-top: 1px solid var(--rule);
+    margin: 10px 0 10px;
+  }
+
+  .nhd-label-icon {
+    background: none !important;
+    border: none !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  .nhd-label-icon .label {
+    position: absolute;
+    left: 0; top: 0;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-shadow:
+      -1px -1px 2px var(--label-halo),
+       1px -1px 2px var(--label-halo),
+      -1px  1px 2px var(--label-halo),
+       1px  1px 2px var(--label-halo),
+       0    0   3px var(--label-halo),
+       0    0   5px var(--label-halo);
+    pointer-events: none;
+  }
+
+  .leaflet-popup-content { font-family: var(--sans); font-size: 13px; }
+  .leaflet-popup-content strong {
+    font-family: var(--serif); font-size: 15px; display: block; margin-bottom: 2px;
+  }
+
+  @media (max-width: 720px) {
+    #app { flex-direction: column; }
+    #sidebar {
+      width: 100%; height: auto; max-height: 45vh;
+      border-right: none; border-bottom: 1px solid var(--rule);
+    }
+    #map { height: 55vh; }
+    .leaflet-control.info-control {
+      width: calc(100% - 30px); max-height: 40vh;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <h1>Morgantown, WV</h1>
+    <p class="dates">June 12–15, 2026 · Taft '83 reunion weekend</p>
+
+    <h2>Basemap</h2>
+    <span class="control-label">Theme</span>
+    <div class="segmented" id="seg-theme">
+      <button data-theme="light" class="active">Light</button>
+      <button data-theme="dark">Dark</button>
+    </div>
+    <span class="control-label">Detail</span>
+    <div class="segmented" id="seg-detail">
+      <button data-detail="minimal">Minimal</button>
+      <button data-detail="standard" class="active">Standard</button>
+      <button data-detail="detailed">Detailed</button>
+    </div>
+
+    <h2>Layers</h2>
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-neighborhoods" checked>
+      Historic neighborhoods
+    </label>
+    <label class="layer-toggle">
+      <input type="checkbox" id="toggle-rentals" checked>
+      Candidate rentals
+    </label>
+    <label class="layer-toggle disabled">
+      <input type="checkbox" disabled>
+      Activities &amp; resources <em>(to come)</em>
+    </label>
+
+    <h2>Price tier · est. $/night</h2>
+    <div id="price-legend"></div>
+
+    <h2>Rental status</h2>
+    <div id="status-legend"></div>
+    <p class="legend-note" id="rentals-note"></p>
+
+    <h2>Attribute key</h2>
+    <div id="attr-legend" class="attr-legend"></div>
+
+    <h2>Neighborhoods</h2>
+    <ul class="neighborhood-list" id="nhd-list"></ul>
+
+    <p class="footnote">
+      Boundaries are approximations drawn to follow major streets, creeks, and the river.
+      Attribute scores and price tiers are placeholder estimates — refine as we research.
+      Tiles via OpenStreetMap contributors and CARTO.
+    </p>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="properties.js"></script>
+<script>
+/* Price tiers — drive polygon edge color and the sidebar legend. */
+const priceTiers = [
+  { max: 140, color: '#5b8c5a', label: 'Under $140' },
+  { max: 180, color: '#9cae5c', label: '$140 – 179' },
+  { max: 220, color: '#d8a437', label: '$180 – 219' },
+  { max: 260, color: '#c97133', label: '$220 – 259' },
+  { max: Infinity, color: '#a13d2c', label: '$260 and up' }
+];
+function priceColor(p) { return priceTiers.find(t => p < t.max).color; }
+function priceLabel(p) { return priceTiers.find(t => p < t.max).label; }
+
+/* Each attribute has a weight (used in the aggregated Overall score) and a
+   direction ('asc' = higher is better; 'desc' = lower is better, e.g. price).
+   To retune the trip's priorities, edit the weight values. The four base
+   attributes' weights should sum to 1.0; 'overall' has weight 0 so it never
+   feeds back into itself.
+   These weights are mirrored in properties.json under
+   scoring.neighborhoods.weights — keep the two in sync. */
+const attributes = [
+  {
+    key: 'price', label: 'Price', colorVar: '--warm',
+    weight: 0.25, direction: 'desc',
+    raw:  n => n.avgPriceNight,
+    text: n => '$' + n.avgPriceNight + ' · ' + priceLabel(n.avgPriceNight) + ' tier'
+  },
+  {
+    key: 'walk', label: 'Walk', colorVar: '--moss',
+    weight: 0.30, direction: 'asc',
+    raw:  n => n.attrs.walk,
+    text: n => n.attrs.walk + ' / 5'
+  },
+  {
+    key: 'quiet', label: 'Quiet', colorVar: '--slate',
+    weight: 0.25, direction: 'asc',
+    raw:  n => n.attrs.quiet,
+    text: n => n.attrs.quiet + ' / 5'
+  },
+  {
+    key: 'historic', label: 'Historic', colorVar: '--gold',
+    weight: 0.20, direction: 'asc',
+    raw:  n => n.attrs.historic,
+    text: n => n.attrs.historic + ' / 5'
+  },
+  {
+    key: 'overall', label: 'Overall', colorVar: '--ink',
+    weight: 0, direction: 'asc',
+    raw:  n => n.overall,
+    text: n => n.overall.toFixed(2) + ' / 5'
+  }
+];
+
+/* Neighborhood data */
+const neighborhoods = [
+  {
+    id: "downtown", name: "Downtown", era: "Founded 1785",
+    avgPriceNight: 200,
+    attrs: { walk: 5, quiet: 2, historic: 4 },
+    tags: ["Original town plat", "Historic district", "Walkable core"],
+    blurb: "The original Morgantown, laid out in 1785 by Zackquill Morgan on a plateau above the Monongahela. " +
+           "Bounded here by Spruce/Pleasant Streets to the west, Maiden Lane to the north, University Avenue " +
+           "to the east, and Deckers Creek to the south. High Street is the spine; the bars, restaurants, and " +
+           "Hotel Morgan cluster within. For three old friends on foot at night, this is the easiest base.",
+    bounds: [
+      [39.6342, -79.9590], [39.6342, -79.9555], [39.6320, -79.9510],
+      [39.6285, -79.9505], [39.6258, -79.9520], [39.6248, -79.9555],
+      [39.6248, -79.9590], [39.6260, -79.9605], [39.6298, -79.9605]
+    ],
+    center: [39.6298, -79.9558]
+  },
+  {
+    id: "first-ward", name: "First Ward", era: "19th-century political ward",
+    avgPriceNight: 180,
+    attrs: { walk: 5, quiet: 3, historic: 4 },
+    tags: ["Riverside strip", "Historic ward name"],
+    blurb: "The river-fronting western slice of historic downtown — Monongahela on the west, Pleasant on the " +
+           "east, Maiden Lane on the north, Deckers Creek on the south. The ward name has faded from official " +
+           "use but longtime residents still use it. The Caperton Trail runs along its waterfront edge.",
+    bounds: [
+      [39.6342, -79.9620], [39.6342, -79.9590], [39.6298, -79.9605],
+      [39.6260, -79.9605], [39.6248, -79.9628], [39.6260, -79.9645],
+      [39.6310, -79.9648]
+    ],
+    center: [39.6300, -79.9620]
+  },
+  {
+    id: "sunnyside", name: "Sunnyside", era: "Late 1800s, heavily redeveloped",
+    avgPriceNight: 150,
+    attrs: { walk: 5, quiet: 1, historic: 2 },
+    tags: ["Student-dominated", "Bars & rentals", "Loud"],
+    blurb: "Wedged between the river, downtown, and the WVU downtown campus — Beechurst (W), University (E), " +
+           "Stadium Drive (N), Maiden Lane (S). Originally a 19th-century neighborhood for university families; " +
+           "now overwhelmingly student rentals and the loudest stretch of bars in town. Useful to know about — " +
+           "but not where three sixty-year-olds want to sleep.",
+    bounds: [
+      [39.6420, -79.9620], [39.6420, -79.9555], [39.6395, -79.9540],
+      [39.6365, -79.9540], [39.6342, -79.9555], [39.6342, -79.9620],
+      [39.6395, -79.9625]
+    ],
+    center: [39.6378, -79.9588]
+  },
+  {
+    id: "south-park", name: "South Park", era: "1890s–1910s",
+    avgPriceNight: 220,
+    attrs: { walk: 4, quiet: 4, historic: 5 },
+    tags: ["Victorian streetcar suburb", "NRHP historic district", "Quiet"],
+    blurb: "Morgantown's most architecturally intact historic neighborhood — a streetcar suburb laid out across " +
+           "Deckers Creek from downtown in the 1890s. Queen Anne, Colonial Revival, and Foursquare houses line " +
+           "tree-shaded streets. Walk to downtown across the Walnut Street pedestrian bridge in ten minutes — " +
+           "the postcard option.",
+    bounds: [
+      [39.6248, -79.9628], [39.6240, -79.9590], [39.6240, -79.9540],
+      [39.6240, -79.9485], [39.6210, -79.9475], [39.6175, -79.9475],
+      [39.6160, -79.9510], [39.6155, -79.9560], [39.6175, -79.9605],
+      [39.6210, -79.9620]
+    ],
+    center: [39.6206, -79.9540]
+  },
+  {
+    id: "greenmont", name: "Greenmont", era: "Late 1800s–early 1900s",
+    avgPriceNight: 140,
+    attrs: { walk: 3, quiet: 4, historic: 3 },
+    tags: ["Working-class historic", "Riverside", "Industrial heritage"],
+    blurb: "South of South Park along the Monongahela. Greenmont grew up around the railroad and the early-" +
+           "20th-century industrial corridor — working-class housing stock, narrow streets, strong neighborhood " +
+           "identity. Greenmont Avenue is the spine; the Caperton Trail runs the river edge.",
+    bounds: [
+      [39.6175, -79.9620], [39.6175, -79.9560], [39.6135, -79.9560],
+      [39.6115, -79.9595], [39.6135, -79.9625], [39.6160, -79.9628]
+    ],
+    center: [39.6150, -79.9595]
+  },
+  {
+    id: "woodburn", name: "Woodburn", era: "Established mid-1800s",
+    avgPriceNight: 185,
+    attrs: { walk: 4, quiet: 4, historic: 4 },
+    tags: ["Adjacent to WVU campus", "Historic homes", "Quiet"],
+    blurb: "Named for the Woodburn Female Seminary (1858), which evolved into West Virginia University. The " +
+           "neighborhood wraps the eastern flank of WVU's downtown campus around Woodburn Circle — University " +
+           "(W), Brockway (N), Forest (E), Willey (S). Mostly older single-family houses, leafy streets, and " +
+           "the campus-edge quiet that vanishes the moment you cross into Sunnyside.",
+    bounds: [
+      [39.6395, -79.9540], [39.6395, -79.9460], [39.6365, -79.9450],
+      [39.6345, -79.9460], [39.6342, -79.9510], [39.6342, -79.9540]
+    ],
+    center: [39.6370, -79.9498]
+  },
+  {
+    id: "wiles-hill", name: "Wiles Hill", era: "Late 1800s–early 1900s",
+    avgPriceNight: 155,
+    attrs: { walk: 3, quiet: 3, historic: 3 },
+    tags: ["Hillside residential", "Older housing stock", "Steep streets"],
+    blurb: "A hillside neighborhood east of Woodburn, developed alongside the early growth of WVU. Bounded " +
+           "roughly by Forest (W), Maple (N), Watts (E), Charles (S). Modest early-20th-century houses, mature " +
+           "trees, very steep streets. Wiles Hill Cemetery anchors the high ground. Same vintage of housing as " +
+           "South Park, with less polish.",
+    bounds: [
+      [39.6395, -79.9460], [39.6395, -79.9400], [39.6360, -79.9385],
+      [39.6320, -79.9395], [39.6310, -79.9430], [39.6325, -79.9460],
+      [39.6365, -79.9450]
+    ],
+    center: [39.6355, -79.9425]
+  },
+  {
+    id: "jerome-park", name: "Jerome Park", era: "Early 20th century",
+    avgPriceNight: 165,
+    attrs: { walk: 3, quiet: 4, historic: 3 },
+    tags: ["Planned residential", "Quiet"],
+    blurb: "An early-20th-century planned residential neighborhood east of South Park, on slopes climbing " +
+           "toward the WVU campus. Curved streets — a step away from the strict grid of older Morgantown.",
+    bounds: [
+      [39.6310, -79.9430], [39.6320, -79.9395], [39.6280, -79.9385],
+      [39.6240, -79.9395], [39.6225, -79.9430], [39.6240, -79.9460],
+      [39.6280, -79.9460]
+    ],
+    center: [39.6273, -79.9425]
+  },
+  {
+    id: "suncrest", name: "Suncrest", era: "Mostly post-WWII",
+    avgPriceNight: 235,
+    attrs: { walk: 1, quiet: 4, historic: 1 },
+    tags: ["Suburban", "Near Evansdale campus", "Newer housing"],
+    blurb: "North of downtown along Patteson Drive, developed largely after WWII as Morgantown grew toward " +
+           "WVU's Evansdale campus. River (W), Mileground (E), Star City (N), Stadium Drive (S). More suburban " +
+           "in feel — wider streets, larger lots, fewer porches. The newer end of the rental market lives here. " +
+           "Convenient for the Coliseum; less so for downtown evenings.",
+    bounds: [
+      [39.6580, -79.9750], [39.6580, -79.9620], [39.6520, -79.9600],
+      [39.6470, -79.9620], [39.6460, -79.9680], [39.6480, -79.9740],
+      [39.6540, -79.9760]
+    ],
+    center: [39.6520, -79.9685]
+  },
+  {
+    id: "westover", name: "Westover", era: "Incorporated 1900",
+    avgPriceNight: 135,
+    attrs: { walk: 2, quiet: 3, historic: 2 },
+    tags: ["Across the river", "Separate municipality", "Glass & rail heritage"],
+    blurb: "An independent municipality across the Monongahela. River (E), I-79 (W). Grew up around glass works " +
+           "and the B&O railroad. Quick to cross via the Westover Bridge but a notable psychological line.",
+    bounds: [
+      [39.6360, -79.9700], [39.6240, -79.9700], [39.6200, -79.9740],
+      [39.6200, -79.9810], [39.6260, -79.9830], [39.6320, -79.9830],
+      [39.6360, -79.9780]
+    ],
+    center: [39.6280, -79.9770]
+  },
+  {
+    id: "star-city", name: "Star City", era: "Founded 1906",
+    avgPriceNight: 115,
+    attrs: { walk: 1, quiet: 3, historic: 2 },
+    tags: ["Separate town", "Historic glass-making"],
+    blurb: "A small, separately incorporated town just north of Morgantown, named for the Star Glass Works " +
+           "that founded it in 1906. The Mon River Trail runs through; useful as a recreation anchor more " +
+           "than a place to stay.",
+    bounds: [
+      [39.6580, -79.9870], [39.6580, -79.9790], [39.6510, -79.9780],
+      [39.6480, -79.9810], [39.6485, -79.9870]
+    ],
+    center: [39.6530, -79.9825]
+  }
+];
+
+/* Attribute normalization
+   - attrFraction:  0–1 fraction for the visual bar fill (no value judgment)
+   - attrGoodness:  0–5 goodness score with directionality applied
+                    (lower price = higher goodness; otherwise raw value)
+   - n.overall:     weighted sum of goodness × weight across base attributes
+*/
+const PRICE_VALUES = neighborhoods.map(n => n.avgPriceNight);
+const PRICE_MIN = Math.min(...PRICE_VALUES);
+const PRICE_MAX = Math.max(...PRICE_VALUES);
+
+function attrFraction(n, attr) {
+  if (attr.key === 'price') {
+    return (n.avgPriceNight - PRICE_MIN) / (PRICE_MAX - PRICE_MIN || 1);
+  }
+  if (attr.key === 'overall') {
+    return (n.overall || 0) / 5;
+  }
+  return attr.raw(n) / 5;
+}
+
+function attrGoodness(n, attr) {
+  if (attr.key === 'price') {
+    const span = (PRICE_MAX - PRICE_MIN) || 1;
+    return 5 * (1 - (n.avgPriceNight - PRICE_MIN) / span);
+  }
+  if (attr.key === 'overall') {
+    return n.overall || 0;
+  }
+  return attr.raw(n);
+}
+
+function neighborhoodOverall(n) {
+  let sum = 0;
+  attributes.forEach(attr => {
+    if (!attr.weight) return;
+    sum += attrGoodness(n, attr) * attr.weight;
+  });
+  return sum;
+}
+
+neighborhoods.forEach(n => { n.overall = neighborhoodOverall(n); });
+
+/* Map setup */
+const map = L.map('map', {
+  scrollWheelZoom: true,
+  wheelPxPerZoomLevel: 150,
+  wheelDebounceTime: 60,
+  zoomSnap: 0.1,
+  zoomDelta: 0.5,
+  attributionControl: false
+}).setView([39.6320, -79.9580], 13);
+L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map);
+
+const cartoAttr =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; ' +
+  '<a href="https://carto.com/attributions">CARTO</a>';
+const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+function tile(url, attr, opts) {
+  return L.tileLayer(url, Object.assign({ maxZoom: 19, subdomains: 'abcd', attribution: attr }, opts || {}));
+}
+
+const basemaps = {
+  light: {
+    minimal:  () => tile('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', cartoAttr),
+    standard: () => tile('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',      cartoAttr),
+    detailed: () => tile('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                  osmAttr,
+                         { subdomains: 'abc' })
+  },
+  dark: {
+    minimal:  () => tile('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',  cartoAttr),
+    standard: () => tile('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',       cartoAttr),
+    detailed: () => tile('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',       cartoAttr)
+  }
+};
+
+let currentTheme = 'light';
+let currentDetail = 'standard';
+let currentTileLayer = basemaps[currentTheme][currentDetail]().addTo(map);
+
+function setBasemap(theme, detail) {
+  currentTheme = theme;
+  currentDetail = detail;
+  if (currentTileLayer) map.removeLayer(currentTileLayer);
+  currentTileLayer = basemaps[theme][detail]().addTo(map);
+  document.body.classList.toggle('dark', theme === 'dark');
+  refreshOverlayStyles();
+}
+
+function polyStyleFor(n, isSelected) {
+  const c = priceColor(n.avgPriceNight);
+  return {
+    color: c,
+    weight: isSelected ? 3.5 : 2,
+    fillColor: c,
+    fillOpacity: isSelected
+      ? (currentTheme === 'dark' ? 0.34 : 0.28)
+      : (currentTheme === 'dark' ? 0.16 : 0.12)
+  };
+}
+
+const layers = {
+  neighborhoods: L.layerGroup().addTo(map),
+  rentals:       L.layerGroup(),
+  activities:    L.layerGroup()
+};
+
+const polysById = {};
+let currentSelectedId = null;
+
+neighborhoods.forEach(n => {
+  const poly = L.polygon(n.bounds, polyStyleFor(n, false));
+  poly.on('click', () => selectNeighborhood(n.id));
+  poly.on('mouseover', () => {
+    if (n.id !== currentSelectedId) {
+      poly.setStyle({ fillOpacity: currentTheme === 'dark' ? 0.26 : 0.22 });
+    }
+  });
+  poly.on('mouseout', () => {
+    if (n.id !== currentSelectedId) poly.setStyle(polyStyleFor(n, false));
+  });
+  poly.addTo(layers.neighborhoods);
+  polysById[n.id] = poly;
+
+  const labelIcon = L.divIcon({
+    className: 'nhd-label-icon',
+    html: '<div class="label">' + n.name + '</div>',
+    iconSize: [1, 1],
+    iconAnchor: [0, 0]
+  });
+  L.marker(n.center, {
+    icon: labelIcon, interactive: false, keyboard: false, zIndexOffset: 500
+  }).addTo(layers.neighborhoods);
+});
+
+function refreshOverlayStyles() {
+  neighborhoods.forEach(n => {
+    polysById[n.id].setStyle(polyStyleFor(n, n.id === currentSelectedId));
+  });
+}
+
+function renderPriceLegend() {
+  document.getElementById('price-legend').innerHTML = priceTiers.map(t =>
+    '<div class="legend-row">' +
+      '<span class="legend-bar" style="background:' + t.color + ';"></span>' +
+      '<span>' + t.label + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function renderAttrLegend() {
+  document.getElementById('attr-legend').innerHTML = attributes.map(a =>
+    '<div class="attr-legend-row">' +
+      '<span class="attr-dot" style="background: var(' + a.colorVar + ');"></span>' +
+      '<span>' + a.label + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function renderList() {
+  const ul = document.getElementById('nhd-list');
+  ul.innerHTML = '';
+  neighborhoods.forEach(n => {
+    const li = document.createElement('li');
+    li.dataset.id = n.id;
+    if (n.id === currentSelectedId) li.classList.add('selected');
+    const bars = attributes.map(a => {
+      const v = attrFraction(n, a);
+      const cls = a.key === 'overall' ? 'mini-bar mini-bar-overall' : 'mini-bar';
+      return '<span class="' + cls + '" title="' + a.label + ': ' + a.text(n) + '" ' +
+             'style="--c: var(' + a.colorVar + '); --v: ' + v.toFixed(3) + ';"></span>';
+    }).join('');
+    li.innerHTML =
+      '<span class="row-name">' + n.name + '</span>' +
+      '<span class="row-bars">' + bars + '</span>';
+    li.onclick = () => selectNeighborhood(n.id, true);
+    ul.appendChild(li);
+  });
+}
+
+renderPriceLegend();
+renderAttrLegend();
+renderList();
+
+const InfoControl = L.Control.extend({
+  options: { position: 'bottomright' },
+  onAdd: function() {
+    const div = L.DomUtil.create('div', 'leaflet-control info-control');
+    div.id = 'info-panel';
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    return div;
+  }
+});
+new InfoControl().addTo(map);
+
+function renderInfoPanel(n) {
+  const el = document.getElementById('info-panel');
+  if (!n) {
+    el.innerHTML =
+      '<div class="info-empty">' +
+        'Select a neighborhood — on the map, in the list, or by name — to see ' +
+        'where it lands across price, walkability, quiet, historic character, and ' +
+        'an aggregated Overall score weighted to this trip’s priorities.' +
+      '</div>';
+    return;
+  }
+  const tags = n.tags.map(t => '<span class="info-tag">' + t + '</span>').join('');
+  const bars = attributes.map(a => {
+    const v = attrFraction(n, a);
+    const rowCls = a.key === 'overall' ? 'attr-row attr-row-overall' : 'attr-row';
+    return '<div class="' + rowCls + '">' +
+             '<div class="attr-label">' +
+               '<span class="attr-dot" style="background: var(' + a.colorVar + ');"></span>' +
+               a.label +
+             '</div>' +
+             '<div class="attr-track">' +
+               '<span class="attr-fill" style="--c: var(' + a.colorVar + '); --v: ' + v.toFixed(3) + ';"></span>' +
+             '</div>' +
+             '<div class="attr-value">' + a.text(n) + '</div>' +
+           '</div>';
+  }).join('');
+  el.innerHTML =
+    '<div class="info-head">' +
+      '<h3 class="info-title">' + n.name + '</h3>' +
+      '<div class="info-meta">' + n.era + '</div>' +
+    '</div>' +
+    '<div class="info-tags">' + tags + '</div>' +
+    '<div class="attr-grid">' + bars + '</div>' +
+    '<hr class="info-divider">' +
+    '<p class="info-blurb">' + n.blurb + '</p>';
+}
+
+renderInfoPanel(null);
+
+function selectNeighborhood(id, recenter) {
+  const n = neighborhoods.find(x => x.id === id);
+  if (!n) return;
+  if (recenter) map.setView(n.center, 15, { animate: true });
+  currentSelectedId = id;
+  refreshOverlayStyles();
+  document.querySelectorAll('#nhd-list li').forEach(li => {
+    li.classList.toggle('selected', li.dataset.id === id);
+  });
+  renderInfoPanel(n);
+}
+
+document.getElementById('toggle-neighborhoods').addEventListener('change', e => {
+  if (e.target.checked) layers.neighborhoods.addTo(map);
+  else map.removeLayer(layers.neighborhoods);
+});
+
+function bindSegmented(elId, onPick) {
+  const root = document.getElementById(elId);
+  root.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      root.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      onPick(btn.dataset.theme || btn.dataset.detail);
+    });
+  });
+}
+bindSegmented('seg-theme',  theme  => setBasemap(theme, currentDetail));
+bindSegmented('seg-detail', detail => setBasemap(currentTheme, detail));
+
+/* ------------------------------------------------------------------
+   Candidate rentals — driven by properties.json (the canonical tracker).
+   Status determines marker color, opacity, and dash. Properties without
+   a verified lat/lng are placed at their area centroid plus a small
+   deterministic jitter so they don't stack on top of one another.
+   ------------------------------------------------------------------ */
+const STATUS_STYLES = {
+  candidate:          { fillColor: '#4a6b3a', strokeColor: '#3a5530', dashArray: null,  fillOpacity: 0.75, label: 'Candidate' },
+  shortlist:          { fillColor: '#c79a3a', strokeColor: '#8a6a1f', dashArray: null,  fillOpacity: 0.90, label: 'Shortlist' },
+  needs_verification: { fillColor: '#b3603b', strokeColor: '#8b4628', dashArray: '4,3', fillOpacity: 0.45, label: 'Needs verification' },
+  held:               { fillColor: '#7e5a8c', strokeColor: '#5d3f6b', dashArray: null,  fillOpacity: 0.75, label: 'Held' },
+  booked:             { fillColor: '#3a5530', strokeColor: '#1f3a1a', dashArray: null,  fillOpacity: 0.95, label: 'Booked' },
+  rejected:           { fillColor: '#aaaaaa', strokeColor: '#666666', dashArray: null,  fillOpacity: 0.30, label: 'Rejected' }
+};
+
+function styleFor(status) {
+  return STATUS_STYLES[status] || STATUS_STYLES.candidate;
+}
+
+function deterministicOffset(seedString, magnitudeDeg) {
+  let h = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    h = ((h << 5) - h + seedString.charCodeAt(i)) | 0;
+  }
+  const dLat = ((h & 0xFFF) / 0xFFF - 0.5) * 2 * magnitudeDeg;
+  const dLng = (((h >>> 12) & 0xFFF) / 0xFFF - 0.5) * 2 * magnitudeDeg;
+  return [dLat, dLng];
+}
+
+function buildPropertyPopup(p, areasById, approx) {
+  const area = areasById[p.area_id];
+  const specs = [];
+  if (p.specs && p.specs.bedrooms) specs.push(p.specs.bedrooms + ' BR');
+  if (p.specs && p.specs.bathrooms) specs.push(p.specs.bathrooms + ' BA');
+  if (p.specs && p.specs.sleeps) specs.push('sleeps ' + p.specs.sleeps);
+  if (p.specs && p.specs.sq_ft) specs.push(p.specs.sq_ft + ' sqft');
+  const specLine = specs.length ? specs.join(' &middot; ') : '<em>specs unconfirmed</em>';
+
+  const priceLine = p.pricing && p.pricing.advertised_nightly_avg != null
+    ? '$' + p.pricing.advertised_nightly_avg + '/night avg'
+    : null;
+  const ratingLine = p.ratings && p.ratings.score != null
+    ? '&#9733; ' + p.ratings.score +
+      (p.ratings.score_scale ? '/' + p.ratings.score_scale : '') +
+      (p.ratings.review_count ? ' &middot; ' + p.ratings.review_count + ' reviews' : '')
+    : null;
+  const overallLine = p.scores && p.scores.overall != null
+    ? '<strong style="font-family:var(--serif);font-size:13px;">Overall ' + Number(p.scores.overall).toFixed(2) + ' / 5</strong>'
+    : null;
+  let subscoreLine = null;
+  if (p.scores) {
+    const parts = [];
+    if (p.scores.spec_fit   != null) parts.push('spec ' + p.scores.spec_fit.toFixed(1));
+    if (p.scores.kitchen    != null) parts.push('kit ' + p.scores.kitchen.toFixed(1));
+    if (p.scores.amenities  != null) parts.push('amen ' + p.scores.amenities.toFixed(1));
+    if (p.scores.value      != null) parts.push('val ' + p.scores.value.toFixed(1));
+    if (p.scores.confidence != null) parts.push('conf ' + p.scores.confidence.toFixed(1));
+    if (parts.length) subscoreLine = '<span style="font-size:11px;color:var(--placeholder);">' + parts.join(' &middot; ') + '</span>';
+  }
+
+  const tags = [];
+  tags.push('<span class="info-tag">' + styleFor(p.status).label + '</span>');
+  if (p.platform) tags.push('<span class="info-tag">' + p.platform + '</span>');
+  if (area) tags.push('<span class="info-tag">' + area.name + '</span>');
+
+  const out = ['<strong>' + p.name + '</strong>'];
+  out.push(tags.join(''));
+  out.push(specLine);
+  if (priceLine) out.push(priceLine);
+  if (ratingLine) out.push(ratingLine);
+  if (overallLine) out.push(overallLine);
+  if (subscoreLine) out.push(subscoreLine);
+  if (p.url) out.push('<a href="' + p.url + '" target="_blank">Open listing</a>');
+  if (approx) out.push('<em style="color: var(--placeholder); font-size: 11px;">Approximate position (no verified address)</em>');
+  return out.join('<br>');
+}
+
+function populateRentals(data) {
+  layers.rentals.clearLayers();
+  const areasById = Object.fromEntries(data.areas.map(a => [a.id, a]));
+  data.properties.forEach(p => {
+    let lat, lng, approx = false;
+    if (p.location && p.location.lat != null && p.location.lng != null) {
+      lat = p.location.lat;
+      lng = p.location.lng;
+    } else {
+      const area = areasById[p.area_id];
+      if (!area || !area.centroid) return;
+      const [dLat, dLng] = deterministicOffset(p.id, 0.0022);
+      lat = area.centroid.lat + dLat;
+      lng = area.centroid.lng + dLng;
+      approx = true;
+    }
+    const s = styleFor(p.status);
+    const m = L.circleMarker([lat, lng], {
+      radius: p.status === 'shortlist' ? 10 : 8,
+      color: s.strokeColor,
+      weight: approx ? 1.5 : 2.5,
+      fillColor: s.fillColor,
+      fillOpacity: s.fillOpacity,
+      dashArray: s.dashArray
+    });
+    m.bindPopup(buildPropertyPopup(p, areasById, approx));
+    m.addTo(layers.rentals);
+  });
+  if (document.getElementById('toggle-rentals').checked) {
+    layers.rentals.addTo(map);
+  }
+}
+
+function renderStatusLegend() {
+  const order = ['candidate', 'shortlist', 'needs_verification', 'held', 'booked', 'rejected'];
+  document.getElementById('status-legend').innerHTML = order.map(k => {
+    const s = STATUS_STYLES[k];
+    return '<div class="legend-row">' +
+             '<span class="legend-bar" style="background:' + s.fillColor +
+             '; opacity:' + s.fillOpacity.toFixed(2) +
+             (s.dashArray ? '; border:1px dashed ' + s.strokeColor : '') + ';"></span>' +
+             '<span>' + s.label + '</span>' +
+           '</div>';
+  }).join('');
+}
+renderStatusLegend();
+
+function applyTrackerData(data, sourceLabel) {
+  const noteEl = document.getElementById('rentals-note');
+  populateRentals(data);
+  const counts = data.properties.reduce((acc, p) => {
+    acc[p.status] = (acc[p.status] || 0) + 1;
+    return acc;
+  }, {});
+  const summary = Object.entries(counts)
+    .map(([k, v]) => v + ' ' + (STATUS_STYLES[k] ? STATUS_STYLES[k].label.toLowerCase() : k))
+    .join(', ');
+  noteEl.innerHTML =
+    'Loaded ' + data.properties.length + ' candidates from <code>' + sourceLabel + '</code> ' +
+    '(updated ' + data.$last_updated + '). ' + summary + '.';
+  window.MorgantownMap.tracker = data;
+}
+
+async function loadTracker() {
+  const noteEl = document.getElementById('rentals-note');
+  noteEl.textContent = 'Loading properties...';
+
+  // Path A: live fetch from properties.json (works under HTTP).
+  try {
+    const res = await fetch('properties.json', { cache: 'no-cache' });
+    if (res.ok) {
+      const data = await res.json();
+      applyTrackerData(data, 'properties.json');
+      return;
+    }
+  } catch (e) { /* fall through to shim */ }
+
+  // Path B: fall back to the script-tag shim (works under file://).
+  if (window.PROPERTIES_DATA) {
+    applyTrackerData(window.PROPERTIES_DATA, 'properties.js (shim)');
+    return;
+  }
+
+  // Both unavailable.
+  noteEl.innerHTML =
+    '<strong>Tracker not loaded.</strong> Could not load <code>properties.json</code> ' +
+    'and <code>properties.js</code> is not present. Run ' +
+    '<code>python regen_properties_js.py</code> in this directory to generate the shim, ' +
+    'or serve the folder via <code>python -m http.server 8000</code> and reload via ' +
+    '<code>http://localhost:8000/morgantown_map.html</code>.';
+  document.getElementById('toggle-rentals').checked = false;
+}
+
+document.getElementById('toggle-rentals').addEventListener('change', e => {
+  if (e.target.checked) layers.rentals.addTo(map);
+  else map.removeLayer(layers.rentals);
+});
+
+loadTracker();
+
+/* Activities — Phase 3 extension point. */
+function addActivity(a) {
+  const palette = {
+    dining: '#c79a3a', trail: '#4a6b3a', grocery: '#4a5d6e',
+    brewery: '#a6481f', sight: '#7e5a8c', service: '#5e5e5e'
+  };
+  const color = palette[a.kind] || '#c79a3a';
+  const m = L.circleMarker([a.lat, a.lng], {
+    radius: 6, color: color, weight: 2,
+    fillColor: color, fillOpacity: 0.7
+  });
+  m.bindPopup('<strong>' + a.name + '</strong>' + (a.kind || '') +
+              (a.notes ? '<br>' + a.notes : '') +
+              (a.url ? '<br><a href="' + a.url + '" target="_blank">More</a>' : ''));
+  m.addTo(layers.activities);
+  return m;
+}
+
+window.MorgantownMap = {
+  map, layers, neighborhoods, attributes, priceTiers,
+  STATUS_STYLES, populateRentals, loadTracker,
+  addActivity, selectNeighborhood,
+  attrGoodness, neighborhoodOverall
+};
+</script>
+</body>
+</html>

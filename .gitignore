@@ -1,0 +1,23 @@
+# Local credentials — never commit
+.gh-token
+.netlify-token
+.env
+.env.local
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build / runtime
+node_modules/
+.netlify/
